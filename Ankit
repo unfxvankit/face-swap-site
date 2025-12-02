@@ -1,0 +1,50 @@
+const image1Input = document.getElementById('image1');
+const image2Input = document.getElementById('image2');
+const swapBtn = document.getElementById('swapBtn');
+const outputCanvas = document.getElementById('outputCanvas');
+const ctx = outputCanvas.getContext('2d');
+
+// Load face-api models
+Promise.all([
+    faceapi.nets.tinyFaceDetector.loadFromUri('https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights/'),
+    faceapi.nets.faceLandmark68Net.loadFromUri('https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights/'),
+    faceapi.nets.faceRecognitionNet.loadFromUri('https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights/')
+]).then(() => {
+    console.log('Models loaded');
+});
+
+swapBtn.addEventListener('click', async () => {
+    const img1 = await loadImage(image1Input.files[0]);
+    const img2 = await loadImage(image2Input.files[0]);
+    
+    const detections1 = await faceapi.detectSingleFace(img1, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks();
+    const detections2 = await faceapi.detectSingleFace(img2, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks();
+    
+    if (!detections1 || !detections2) {
+        alert('No face detected in one or both images!');
+        return;
+    }
+    
+    // Simple swap: Draw img2's face on img1's body (basic implementation)
+    ctx.drawImage(img1, 0, 0, 400, 300);
+    const faceImg2 = extractFace(img2, detections2.landmarks);
+    ctx.drawImage(faceImg2, detections1.landmarks.getJawOutline()[0].x, detections1.landmarks.getJawOutline()[0].y, 100, 100); // Adjust as needed
+});
+
+function loadImage(file) {
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.src = URL.createObjectURL(file);
+    });
+}
+
+function extractFace(img, landmarks) {
+    // Basic face extraction (simplified)
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = 100;
+    canvas.height = 100;
+    ctx.drawImage(img, 0, 0, 100, 100);
+    return canvas;
+}
